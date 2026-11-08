@@ -1,0 +1,111 @@
+# dotnet-build-nuget: builds a .NET library repo and leaves its NuGet packages ready to push.
+#
+# Steps, in order: convention guards, restore, build, format check, test, pack, and the "nuget" artifact
+# (the .nupkg files), which is what the caller's publish job pushes to nuget.org.
+#
+# Develop calls it alone, as the gate. Main calls it and then pushes the artifact in a job of its own: the push
+# stays in the caller because nuget.org's Trusted Publishing policy names the caller's workflow file.
+#
+# How to call it:
+#
+#   jobs:
+#     build:
+#       uses: JorgeCostaMacia/github-workflows/.github/workflows/dotnet-build-nuget.yml@v1
+#       with:
+#         solution: my-library.slnx
+#         dotnet-version: |           # optional, 10.0.x by default; several when the tests run on several
+#           8.0.x
+#           9.0.x
+#           10.0.x
+#
+# What the calling repo needs:
+#   - The package versions in its own build settings (VersionPrefix): pack reads them, the workflow does not.
+#   - IsPackable only on the projects that are packages: pack runs on the whole solution, and the test
+#     projects must say IsPackable false.
+#   - `*.cs text eol=crlf` in .gitattributes: the runner checks out LF otherwise, and the format check
+#     flags every file.
+name: dotnet-build-nuget
+
+on:
+  workflow_call:
+    inputs:
+      solution:
+        description: Solution to restore, build, test and pack, e.g. my-library.slnx
+        type: string
+        required: true
+      dotnet-version:
+        description: SDK or SDKs to install, one per line
+        type: string
+        default: 10.0.x
+      configuration:
+        description: Build configuration
+        type: string
+        default: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SOLUTION: ${{ inputs.solution }}
+      CONFIGURATION: ${{ inputs.configuration }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          clean: true
+
+      # The convention guards run first, before the SDK is installed, so a violation fails in seconds.
+      # They scan every .cs in the repo except bin and obj.
+      #
+      # The .editorconfig can't flag target-typed new()/implicit new[] (the analyzer never reports the
+      # implicit form), so they drift silently. This grep fails the build if any reappear: spell the type out.
+      # A generic constraint `where T : new()` is not a construction, so it is filtered out.
+      - name: Convention guard — explicit types
+        run: |
+          if grep -rnE '\bnew\(|new\[\]' --include='*.cs' --exclude-dir=obj --exclude-dir=bin . | grep -vE ': new\(\)'; then
+            echo "::error::Target-typed 'new(' or implicit 'new[]' found — the convention requires explicit types (write 'new Type(...)')."
+            exit 1
+          fi
+
+      # Nor does it flag a collection expression (prefer_collection_expression = false only stops the IDE from
+      # offering one). Attributes, indexers, array types and list patterns never match this pattern.
+      - name: Convention guard — no collection expressions
+        run: |
+          if grep -rnE '(=|=>|return|\(|,)[[:space:]]*\[[^]]*\][[:space:]]*[;,)]|(=|=>|return)[[:space:]]*\[[[:space:]]*$|^[[:space:]]*\[[[:space:]]*$' --include='*.cs' --exclude-dir=obj --exclude-dir=bin .; then
+            echo "::error::Collection expression '[…]' found — the convention requires an explicit collection (write 'new List<T>()', 'Array.Empty<T>()')."
+            exit 1
+          fi
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      # nuget.org only: the libraries consume nothing private, so there is no credential to pass.
+      - name: Restore
+        run: dotnet restore "$SOLUTION"
+
+      # Warnings as errors and the NuGet vulnerability audit live in the repo's build settings, so a warning
+      # or a vulnerable dependency fails here without a step of its own.
+      - name: Build
+        run: dotnet build "$SOLUTION" -c "$CONFIGURATION" --no-restore
+
+      # Fails if dotnet format would change any file: the code is committed already formatted.
+      - name: Format
+        run: dotnet format "$SOLUTION" --verify-no-changes --no-restore
+
+      - name: Test
+        run: dotnet test "$SOLUTION" -c "$CONFIGURATION" --no-build
+
+      # Packs what was just built and tested, with the version the repo's build settings give the packages.
+      - name: Pack
+        run: dotnet pack "$SOLUTION" -c "$CONFIGURATION" --no-build -o nuget
+
+      # The "nuget" artifact holds the .nupkg and .snupkg files, for the caller's job that pushes them.
+      - name: Upload nuget artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuget
+          path: nuget/*
+          if-no-files-found: error

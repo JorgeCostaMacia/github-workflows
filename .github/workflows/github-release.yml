@@ -1,0 +1,37 @@
+# github-release: creates the GitHub Release of the tag that triggered the caller, with generated notes.
+#
+# Nothing is built here: Main already published the packages when the release reached main, and this only
+# records the version on GitHub.
+#
+# How to call it, from a workflow that runs on the release tags:
+#
+#   on:
+#     push:
+#       tags:
+#         - 'v*'
+#
+#   permissions:
+#     contents: write
+#
+#   jobs:
+#     release:
+#       uses: JorgeCostaMacia/github-workflows/.github/workflows/github-release.yml@v1
+#
+# What the calling repo needs:
+#   - `contents: write` in its permissions: creating a Release writes to the repo.
+name: github-release
+
+on:
+  workflow_call:
+
+jobs:
+  # No permissions of its own: the job takes the caller's, which grants contents: write.
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
