@@ -13,8 +13,11 @@
 Called by [ddd-dotnet](https://github.com/JorgeCostaMacia/ddd-dotnet),
 [quartz-dotnet](https://github.com/JorgeCostaMacia/quartz-dotnet),
 [serilog-dotnet](https://github.com/JorgeCostaMacia/serilog-dotnet),
-[bus-net](https://github.com/JorgeCostaMacia/bus-net) and [http-net](https://github.com/JorgeCostaMacia/http-net). Public so that those public repos can call it; it is built
-for them, and nothing here is supported for anyone else.
+[bus-dotnet](https://github.com/JorgeCostaMacia/bus-dotnet),
+[bus-kafka-dotnet](https://github.com/JorgeCostaMacia/bus-kafka-dotnet),
+[bus-rabbitmq-dotnet](https://github.com/JorgeCostaMacia/bus-rabbitmq-dotnet) and
+[http-dotnet](https://github.com/JorgeCostaMacia/http-dotnet). Public so that those public repos can call
+it; it is built for them, and nothing here is supported for anyone else.
 
 ## Workflows
 
