@@ -20,7 +20,7 @@ A release is a minor or a patch when every caller keeps working (a fix, a new op
 ## Releasing
 
 ```bash
-# from develop, with the work merged
+# from develop, with the work merged and tried from a caller (below)
 git checkout -b release/1.2.0 develop
 # write the CHANGELOG.md entry, if the version asks something of its callers, and commit it
 
@@ -38,12 +38,4 @@ git push origin v1 --force
 
 ## Trying a change before releasing it
 
-A workflow only really runs when a repository calls it. To try one before the release, a library's feature branch points at this repository's branch instead of the major tag (`uses: …/dotnet-build-nuget.yml@develop`, or `@feature/<name>`), and its Develop runs it; the pin goes back to `@v1` before that branch is merged.
-
-## Checking
-
-There is nothing to build: a workflow is checked with [actionlint](https://github.com/rhysd/actionlint), which also runs shellcheck on every `run:` script. Develop runs it on every push to `develop` and every pull request; locally:
-
-```bash
-docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -no-color
-```
+There is nothing to build or check here: a workflow only really runs when a repository calls it, on the real runner with the real secrets. So **every change is tried from a caller before its release**: a library's feature branch points at this repository's branch instead of the major tag (`uses: …/dotnet-build-nuget.yml@develop`, or `@feature/<name>`), and its Develop (and Main, for what only Main runs) runs it. The pin goes back to `@v1` before that branch is merged.
