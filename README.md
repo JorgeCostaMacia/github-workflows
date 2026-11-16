@@ -8,6 +8,7 @@
 > GitHub Releases — written once and called with `uses:` from every library repo.
 
 [![License](https://img.shields.io/github/license/JorgeCostaMacia/github-workflows.svg)](LICENSE.txt)
+[![Develop](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/develop.yml/badge.svg?branch=develop)](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/develop.yml)
 [![Release](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/release.yml/badge.svg)](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/release.yml)
 
 Called by [ddd-dotnet](https://github.com/JorgeCostaMacia/ddd-dotnet),
@@ -24,11 +25,11 @@ it; it is built for them, and nothing here is supported for anyone else.
 | Workflow | What it does |
 | --- | --- |
 | [dotnet-build-nuget](.github/workflows/dotnet-build-nuget.yml) | Convention guards, restore, build, format check, test and pack of a library repo, as the `nuget` artifact |
-| [github-release](.github/workflows/github-release.yml) | The GitHub Release of the pushed tag, with generated notes |
+| [github-release](.github/workflows/github-release.yml) | The GitHub Release of the pushed `vX.Y.Z` tag, its notes the tag's section of the CHANGELOG (GitHub's generated notes when there is none) |
 
 Each workflow documents itself: its header says what it does, how to call it and what the calling repo needs.
-`release.yml` is not one of them: it is this repository's own workflow, which creates the GitHub Release of each
-`vX.Y.Z` tag.
+`develop.yml` and `release.yml` are not among them: they are this repository's own, which lint every workflow and
+create the GitHub Release of each `vX.Y.Z` tag.
 
 ## Calling them
 
@@ -104,7 +105,8 @@ jobs:
         run: dotnet nuget push nuget/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 ```
 
-**Release** records each `v*` tag the GitFlow finish pushes:
+**Release** records each `vX.Y.Z` tag the GitFlow finish pushes, its notes the tag's section of the library's
+`CHANGELOG.md` (`## 1.2.0`, one paragraph per line):
 
 ```yaml
 name: Release
@@ -112,7 +114,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -124,19 +126,21 @@ jobs:
 
 ## Checking
 
-There is nothing to build: the workflows are checked with [actionlint](https://github.com/rhysd/actionlint).
+There is nothing to build: the workflows are checked with [actionlint](https://github.com/rhysd/actionlint), which
+Develop runs on every push to `develop` and every pull request.
 
 ```bash
 docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -no-color
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the release conventions, and [AGENTS.md](AGENTS.md) for how the repository
-is put together.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for GitFlow, the release and how to try a change before it, and
+[AGENTS.md](AGENTS.md) for how the repository is put together.
 
 ## Versioning
 
 Every release is a `vX.Y.Z` tag with its GitHub Release, and moves the major tag, `v1`, which callers pin (`@v1`): a
-compatible change reaches them with no change on their side, and a breaking one gets a new major.
+compatible change reaches them with no change on their side, and a breaking one gets a new major. What a version asks
+of the repositories that call it is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contact
 

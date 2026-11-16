@@ -1,14 +1,15 @@
-# github-release: creates the GitHub Release of the tag that triggered the caller, with generated notes.
+# github-release: creates the GitHub Release of the pushed vX.Y.Z tag, its notes taken from the CHANGELOG.
 #
-# Nothing is built here: Main already published the packages when the release reached main, and this only
-# records the version on GitHub.
+# The notes are the tag's section of CHANGELOG.md: what a consumer has to act on, as the repo wrote it on the release
+# branch. A version with no section (one that only touched the docs or the internals), or a repo with no CHANGELOG,
+# gets GitHub's generated notes instead. Nothing is built or attached: Main already pushed the packages to nuget.org.
 #
-# How to call it, from a workflow that runs on the release tags:
+# How to call it, from the repo's Release:
 #
 #   on:
 #     push:
 #       tags:
-#         - 'v*'
+#         - 'v*.*.*'
 #
 #   permissions:
 #     contents: write
@@ -18,7 +19,13 @@
 #       uses: JorgeCostaMacia/github-workflows/.github/workflows/github-release.yml@v1
 #
 # What the calling repo needs:
-#   - `contents: write` in its permissions: creating a Release writes to the repo.
+#   - `contents: write` in its permissions: the run's own token creates the Release.
+#   - A section per version in CHANGELOG.md, headed by the bare version: `## 1.2.0` (`## [1.2.0]`, `## v1.2.0` and
+#     `## 1.2.0 - <date>` are read too). It runs until the next `## ` heading, and is copied as it is: one paragraph
+#     per line, since a Release keeps every line break.
+#
+# A Release is created once: a run on a tag that already has one fails rather than rewrite it; its notes can still be
+# edited by hand.
 name: github-release
 
 on:
@@ -31,7 +38,49 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      # The tag's section, without its heading. The heading is matched on the version followed by nothing, a space or
+      # a `]`, so 1.2.0 never takes the section of 1.2.0-rc1 or 1.2.01.
+      - name: Read notes
+        id: notes
+        env:
+          NOTES: ${{ runner.temp }}/notes.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [ -f CHANGELOG.md ]; then
+            awk -v v="$version" '
+              /^## / {
+                h = $0
+                sub(/^## +\[?v?/, "", h)
+                c = substr(h, length(v) + 1, 1)
+                f = index(h, v) == 1 && (c == "" || c == " " || c == "]")
+                next
+              }
+              f
+            ' CHANGELOG.md > "$NOTES"
+          else
+            : > "$NOTES"
+          fi
+
+          if grep -q '[^[:space:]]' "$NOTES"; then
+            echo "CHANGELOG.md has a section for $version:"
+            cat "$NOTES"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "CHANGELOG.md has no section for $version: GitHub generates the notes"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --verify-tag fails if the tag is not on the remote, rather than create it on the default branch.
       - name: Create Release
-        uses: softprops/action-gh-release@v3
-        with:
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUND: ${{ steps.notes.outputs.found }}
+          NOTES: ${{ runner.temp }}/notes.md
+        run: |
+          if [ "$FOUND" = "true" ]; then
+            notes=(--notes-file "$NOTES")
+          else
+            notes=(--generate-notes)
+          fi
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" "${notes[@]}"
