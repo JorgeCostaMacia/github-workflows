@@ -1,0 +1,31 @@
+# Develop: this repository's own workflow, not one to call. The gate before a release: actionlint over every
+# workflow, which also runs shellcheck on every `run:` script. A workflow only really runs when a repository calls it,
+# so this catches what can be caught without one: syntax, expressions, inputs and outputs, and the scripts.
+name: Develop
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: develop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # The same pinned image as CONTRIBUTING.md's local check, so CI and a developer's machine agree.
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color

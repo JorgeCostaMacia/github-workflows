@@ -1,5 +1,5 @@
 # Release: this repository's own workflow, not one to call. When a vX.Y.Z tag is pushed, it creates the matching
-# GitHub Release with auto-generated notes.
+# GitHub Release through github-release, from the same commit: its notes are the tag's section of CHANGELOG.md.
 #
 # Only tags with three numbers: the major tag (v1) is moved on every release, so it never gets a Release of its own.
 name: Release
@@ -14,11 +14,4 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Create Release
-        uses: softprops/action-gh-release@v3
-        with:
-          generate_release_notes: true
+    uses: ./.github/workflows/github-release.yml

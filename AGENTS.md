@@ -16,10 +16,14 @@ All in `.github/workflows/`, flat, since GitHub does not allow reusable workflow
 
 - `dotnet-build-nuget` — convention guards, restore, build, format check, test and pack of a library repo, as the
   `nuget` artifact.
-- `github-release` — the GitHub Release of the tag that triggered the caller.
+- `github-release` — the GitHub Release of the pushed `vX.Y.Z` tag, with `gh`: its notes are the tag's section of
+  the caller's `CHANGELOG.md`, or GitHub's generated notes when there is none. Nothing attached.
 
-`release.yml` sits beside them but is this repository's own (`on: push`, not `workflow_call`): it creates the GitHub
-Release of each `vX.Y.Z` tag, never of the major tag, which moves on every release.
+Two files beside them are this repository's own (`on: push`, not `workflow_call`):
+
+- `develop.yml` — actionlint over every workflow, on a push to `develop` and on every pull request.
+- `release.yml` — the GitHub Release of each `vX.Y.Z` tag, by calling `github-release` from the same commit; never
+  of the major tag, which moves on every release.
 
 `assets/` holds the icon and the social preview; `social-preview.png` is rendered from `social-preview.svg`, and is
 what the README shows and what is uploaded as the repo's social preview.
@@ -39,22 +43,29 @@ what the README shows and what is uploaded as the repo's social preview.
 
 The version is the tag. Callers pin the major tag (`@v1`), which every release moves to its `vX.Y.Z` commit; a
 `vX.Y.Z` tag never moves. Renaming or removing a workflow, input or output, or adding a required input, is a new
-major. See [CONTRIBUTING.md](CONTRIBUTING.md).
+major. What a release asks of its callers goes in [CHANGELOG.md](CHANGELOG.md), on the release branch. The steps are
+in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The `protect-version-tags` ruleset covers `v*`: no deletion and no force push, with the repository admin as the only
 bypass, which is what lets the major tag move.
 
 ## CI
 
-Only `release.yml`. There is nothing to build: check with actionlint before committing (see CONTRIBUTING.md); a
-workflow is only truly tried when a caller runs it, from Develop first.
+Develop runs actionlint; there is nothing to build. A workflow is only truly tried when a caller runs it: a library's
+feature branch can pin `@develop` to try a change before it is released (CONTRIBUTING.md).
 
 ## Style, Git
 
 - Workflows, comments and docs in English. LF line endings (`.gitattributes`, `.editorconfig`).
-- Lines up to 120 columns, except a command or an error message that reads better whole.
+- Lines up to 120 columns, except a command or an error message that reads better whole, and CHANGELOG.md, one
+  paragraph per line: a section becomes a Release's notes, where every line break is kept.
 - Secrets and inputs reach scripts as environment variables, never pasted into the script.
-- Actions pinned by major (`actions/checkout@v7`); never an action that downloads code at run time.
-- **No GitFlow here**, unlike the library repos: everything lands on `main`, and a release is a `vX.Y.Z` tag plus
-  moving the major tag, as in CONTRIBUTING.md.
+- Actions pinned by major (`actions/checkout@v7`); never an action that downloads code at run time. What `gh`, already
+  on the runner, does in a line (a Release) takes no third-party action.
+- GitFlow, like the library repos, plus moving the major tag after each release finish (CONTRIBUTING.md).
 - Commits with the repo's own identity (`git config --local`), the personal one.
+
+## Relevant skills
+
+- `gitflow`: branches, releases and tags.
+- `changelog`: when a release needs an entry, and its format (the Release takes it as its notes).
