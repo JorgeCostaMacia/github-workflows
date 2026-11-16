@@ -13,9 +13,8 @@ All in `.github/workflows/`, flat, since GitHub does not allow reusable workflow
 - `dotnet-build-nuget` — convention guards, restore, build, format check, test and pack of a library repo, as the `nuget` artifact.
 - `github-release` — the GitHub Release of the pushed `vX.Y.Z` tag, with `gh`: its notes are the tag's section of the caller's `CHANGELOG.md`, or GitHub's generated notes when there is none. Nothing attached.
 
-Two files beside them are this repository's own (`on: push`, not `workflow_call`):
+One file beside them is this repository's own (`on: push`, not `workflow_call`):
 
-- `develop.yml` — actionlint over every workflow, on a push to `develop` and on every pull request.
 - `release.yml` — the GitHub Release of each `vX.Y.Z` tag, by calling `github-release` from the same commit; never of the major tag, which moves on every release.
 
 `assets/` holds the icon and the social preview; `social-preview.png` is rendered from `social-preview.svg`, and is what the README shows and what is uploaded as the repo's social preview.
@@ -35,7 +34,7 @@ The `protect-version-tags` ruleset covers `v*`: no deletion and no force push, w
 
 ## CI
 
-Develop runs actionlint; there is nothing to build. A workflow is only truly tried when a caller runs it: a library's feature branch can pin `@develop` to try a change before it is released (CONTRIBUTING.md).
+Only `release.yml`: there is nothing to build or check. A workflow is only truly tried when a caller runs it, so before every release a library's feature branch pins `@develop` and runs the change (CONTRIBUTING.md).
 
 ## Style, Git
 

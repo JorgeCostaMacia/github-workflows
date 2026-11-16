@@ -7,7 +7,6 @@
 > Reusable GitHub Actions workflows for the `JorgeCostaMacia.*` .NET libraries — build, format check, test, pack and GitHub Releases — written once and called with `uses:` from every library repo.
 
 [![License](https://img.shields.io/github/license/JorgeCostaMacia/github-workflows.svg)](LICENSE.txt)
-[![Develop](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/develop.yml/badge.svg?branch=develop)](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/develop.yml)
 [![Release](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/release.yml/badge.svg)](https://github.com/JorgeCostaMacia/github-workflows/actions/workflows/release.yml)
 
 Called by [ddd-dotnet](https://github.com/JorgeCostaMacia/ddd-dotnet), [quartz-dotnet](https://github.com/JorgeCostaMacia/quartz-dotnet), [serilog-dotnet](https://github.com/JorgeCostaMacia/serilog-dotnet), [bus-dotnet](https://github.com/JorgeCostaMacia/bus-dotnet), [bus-kafka-dotnet](https://github.com/JorgeCostaMacia/bus-kafka-dotnet), [bus-rabbitmq-dotnet](https://github.com/JorgeCostaMacia/bus-rabbitmq-dotnet) and [http-dotnet](https://github.com/JorgeCostaMacia/http-dotnet). Public so that those public repos can call it; it is built for them, and nothing here is supported for anyone else.
@@ -19,7 +18,7 @@ Called by [ddd-dotnet](https://github.com/JorgeCostaMacia/ddd-dotnet), [quartz-d
 | [dotnet-build-nuget](.github/workflows/dotnet-build-nuget.yml) | Convention guards, restore, build, format check, test and pack of a library repo, as the `nuget` artifact |
 | [github-release](.github/workflows/github-release.yml) | The GitHub Release of the pushed `vX.Y.Z` tag, its notes the tag's section of the CHANGELOG (GitHub's generated notes when there is none) |
 
-Each workflow documents itself: its header says what it does, how to call it and what the calling repo needs. `develop.yml` and `release.yml` are not among them: they are this repository's own, which lint every workflow and create the GitHub Release of each `vX.Y.Z` tag.
+Each workflow documents itself: its header says what it does, how to call it and what the calling repo needs. `release.yml` is not one of them: it is this repository's own, which creates the GitHub Release of each `vX.Y.Z` tag.
 
 ## Calling them
 
@@ -112,13 +111,9 @@ jobs:
     uses: JorgeCostaMacia/github-workflows/.github/workflows/github-release.yml@v1
 ```
 
-## Checking
+## Trying a change
 
-There is nothing to build: the workflows are checked with [actionlint](https://github.com/rhysd/actionlint), which Develop runs on every push to `develop` and every pull request.
-
-```bash
-docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -no-color
-```
+There is nothing to build or check here: a workflow only really runs when a repository calls it. Before every release, a library's feature branch pins this repository's `@develop` instead of `@v1`, and its own workflows run the change.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for GitFlow, the release and how to try a change before it, and [AGENTS.md](AGENTS.md) for how the repository is put together.
 
